@@ -1,7 +1,14 @@
 # cfs-compiler
-Compiles Closed-Form Script to a Facer compatible closed-form expression
+Compiles Closed-Form Script to a closed-form expression compatible with Facer.
 
-# Operator Precedence
+### Table of Contents
+[Operator Precedence](#operator-precedence)
+
+[Internal Functions](#internal-functions)
+
+[Grammar](#grammar)
+
+## Operator Precedence
 | Precedence | Operators                        | Description                      |
 | ---------- | -------------------------------- | -------------------------------- |
 | 1          | `()`, `f()`                      | parentheses, function calls      |
@@ -39,3 +46,55 @@ Compiles Closed-Form Script to a Facer compatible closed-form expression
 | `x != y`, `x <> y` | int, int           | bool        | `(4 - (1+sign(x-y)) * (1-signn(x-y))) / 4` | x - y ≠ ±0.5   |
 | `x <. y`           | float, float       | bool        | `(1 - signf(x - y)) / 2)`                  | x - y ≠ 0      |
 | `x >. y`           | float, float       | bool        | `(1 + signf(x - y)) / 2)`                  | x - y ≠ 0      |
+
+## Grammar
+```ebnf
+program =
+    function { function }
+    ;
+
+function =
+    "function" ID "(" [ ID { "," ID } ] ")" ␤ { statement ␤ } "return" expression ␤
+    ;
+
+statement =
+    ID "=" expression
+    ;
+
+expression =
+    "if" "(" expression "?" expression [ ":" expression ] ")"
+    | equ_expression
+    ;
+
+equ_expression =
+    rel_expression { ( "==" | "=" | "!=" | "<>" ) rel_expression }
+    ;
+
+rel_expression =
+    add_expression { ( "<" | "<=" | ">" | ">=" | ">." | "<." ) add_expression }
+    ;
+
+add_expression =
+    mult_expression { ( "+" | "-" ) mult_expression }
+    ;
+
+mult_expression =
+    exp_expression { ( "*" | "/" | "%" ) exp_expression }
+    ;
+
+exp_expression =
+    unary_expression [ "^" unary_expression ]
+    ;
+
+unary_expression =
+    "-" primary_expression
+    | primary_expression
+    ;
+
+primary_expression =
+    "(" expression ")"
+    | ID [ "(" [ expression { "," expression } ] ")" ]
+    | NUM
+    | TAG
+    ;
+```    
