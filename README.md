@@ -9,16 +9,16 @@ Compiles Closed-Form Script to a closed-form expression compatible with Facer.
 [Grammar](#grammar)
 
 ## Operator Precedence
-| Precedence | Operators                        | Description                      |
-| ---------- | -------------------------------- | -------------------------------- |
-| 1          | `()`, `f()`                      | parentheses, function calls      |
-| 2          | `-`                              | unary minus                      |
-| 3          | `^`                              | exponentiation                   |
-| 4          | `*`, `/`, `%`                    | multiplication, division, modulo |
-| 5          | `+`, `-`                         | addition, subtraction            |
-| 6          | `<`, `<=`, `>`, `>=`, `<.`, `>.` | comparisons                      |
-| 7          | `==`, `=`, `!=`, `<>`            | comparisons                      |
-| 8          | `if(?)`, `if(?:)`                | binary, ternary conditionals     |
+| Precedence | Operators                        | Description                            |
+| ---------- | -------------------------------- | -------------------------------------- |
+| 1          | `()`, `f()`                      | parentheses, function calls            |
+| 2          | `-`                              | unary minus                            |
+| 3          | `^`                              | exponentiation                         |
+| 4          | `*`, `/`, `%`                    | multiplication, division, modulo       |
+| 5          | `+`, `-`                         | addition, subtraction                  |
+| 6          | `<`, `<=`, `>`, `>=`, `<.`, `>.` | int comparisons, float comparisons     |
+| 7          | `==`, `=`, `!=`, `<>`            | int comparisons                        |
+| 8          | `if(?)`, `if(?:)`                | binary and ternary conditionals        |
 
 ## Internal Functions
 | Function           | Input Types        | Output Type | Implementation                             | Domain         |
@@ -27,17 +27,17 @@ Compiles Closed-Form Script to a closed-form expression compatible with Facer.
 | `asind(x)`         | float              | float       | `deg(asin(x))`                             | −1 ≤ x ≤ 1     |
 | `atan2(y, x)`      | float, float       | float       | `atan(y / x) + (x <. 0) * signf(y) * pi`   | x ≠ 0, y ≠ 0   |
 | `atan2d(y, x)`     | float, float       | float       | `deg(atan2(y, x))`                         | x ≠ 0, y ≠ 0   |
-| `atand(x)`         | float              | float       | `deg(atan(x))`                             |                |
-| `cosd(θ)`          | float              | float       | `cos(rad(θ))`                              |                |
-| `if(b ? t : f)`    | bool, float, float | float       | `b * (t - f) + f`                          |                |
-| `if(b ? t)`        | bool, float        | float       | `b * t`                                    |                |
-| `int(x)`           | float              | int         | `floor(x) + (1 - sign(floor(x))) / 2`      |                |
-| `sind(θ)`          | float              | float       | `sin(rad(θ))`                              |                |
+| `atand(x)`         | float              | float       | `deg(atan(x))`                             | ℝ              |
+| `cosd(θ)`          | float              | float       | `cos(rad(θ))`                              | ℝ              |
+| `if(b ? t : f)`    | bool, float, float | float       | `b * (t - f) + f`                          | ℝ              |
+| `if(b ? t)`        | bool, float        | float       | `b * t`                                    | ℝ              |
+| `int(x)`           | float              | int         | `floor(x) + (1 - sign(floor(x))) / 2`      | ℝ              |
+| `sind(θ)`          | float              | float       | `sin(rad(θ))`                              | ℝ              |
 | `sign(i)`          | int                | int         | `signf(i + 0.5)`                           | x ≠ -0.5       |
 | `signf(x)`         | float              | int         | `abs(x) / x`                               | x ≠ 0          |
 | `signn(i)`         | int                | int         | `signf(i - 0.5)`                           | x ≠ 0.5        |
 | `tand(θ)`          | float              | float       | `tan(rad(θ))`                              | x ≠ π/2 + *k*π |
-| `x % y`            | float, float       | float       | `x - (y * floor(x / y))`                   | x ≠ 0          |
+| `x % y`            | float, float       | float       | `x - (y * floor(x / y))`                   | y ≠ 0          |
 | `x < y`            | int, int           | bool        | `(1 - sign(x - y)) / 2)`                   | x - y ≠ -0.5   |
 | `x <= y`           | int, int           | bool        | `(1 - signn(x - y)) / 2)`                  | x - y ≠ 0.5    |
 | `x > y`            | int, int           | bool        | `(1 + signn(x - y)) / 2)`                  | x - y ≠ 0.5    |
