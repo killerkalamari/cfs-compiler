@@ -71,7 +71,7 @@ equ_expression =
     ;
 
 rel_expression =
-    add_expression { ( "<" | "<=" | ">" | ">=" | ">." | "<." ) add_expression }
+    add_expression { ( "<" | "<=" | ">" | ">=" | "<." | ">." ) add_expression }
     ;
 
 add_expression =
