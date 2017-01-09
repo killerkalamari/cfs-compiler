@@ -42,10 +42,10 @@ Compiles Closed-Form Script to a closed-form expression compatible with Facer.
 | `x <= y`           | int, int           | bool        | `(1 - signn(x - y)) / 2)`                  | x - y ≠ 0.5    |
 | `x > y`            | int, int           | bool        | `(1 + signn(x - y)) / 2)`                  | x - y ≠ 0.5    |
 | `x >= y`           | int, int           | bool        | `(1 + sign(x - y)) / 2)`                   | x - y ≠ -0.5   |
-| `x == y`, `x = y`  | int, int           | bool        | `(x >= y) * (x <= y)`                      | x - y ≠ ±0.5   |
-| `x != y`, `x <> y` | int, int           | bool        | `(4 - (1+sign(x-y)) * (1-signn(x-y))) / 4` | x - y ≠ ±0.5   |
 | `x <. y`           | float, float       | bool        | `(1 - signf(x - y)) / 2)`                  | x - y ≠ 0      |
 | `x >. y`           | float, float       | bool        | `(1 + signf(x - y)) / 2)`                  | x - y ≠ 0      |
+| `x == y`, `x = y`  | int, int           | bool        | `(x >= y) * (x <= y)`                      | x - y ≠ ±0.5   |
+| `x != y`, `x <> y` | int, int           | bool        | `(4 - (1+sign(x-y)) * (1-signn(x-y))) / 4` | x - y ≠ ±0.5   |
 
 ## Grammar
 ```ebnf
