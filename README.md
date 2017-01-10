@@ -61,7 +61,6 @@ The following operators are available in addition to the standard arithmetic ope
 | `!`      | `!x`        | bool               | bool        | Boolean not                       |
 | `not`    | `not x`     | bool               | bool        | Boolean not                       |
 | `^`      | `x^y`       | float, float       | float       | Exponentiation. May not be used sequentially. To square a number, use `x * x` instead. |
-| `//`     | `x//y`      | float, float       | int         | Truncating division using floor() |
 | `%`      | `x%y`       | float, float       | float       | Modulo (remainder) function.      |
 | `<=`     | `x<=y`      | int, int           | bool        | Integer less than or equal to.    |
 | `>=`     | `x>=y`      | int, int           | bool        | Integer greater than or equal to. |
@@ -89,7 +88,7 @@ The following operators are available in addition to the standard arithmetic ope
 | 1          | `()`, `f()`                      | parentheses, function calls                           |
 | 2          | `-`, `!`, `not`                  | unary minus, bool not                                 |
 | 3          | `^`                              | exponentiation                                        |
-| 4          | `*`, `//`, `/`, `%`              | multiplication, truncating division, division, modulo |
+| 4          | `*`, `/`, `%`                    | multiplication, truncating division, division, modulo |
 | 5          | `+`, `-`                         | addition, subtraction                                 |
 | 6          | `<=`, `>=`, `<:`, `>:`, `<`, `>` | int and float comparisons                             |
 | 7          | `==`, `=`, `!=`, `<>`            | int comparisons                                       |
@@ -114,7 +113,6 @@ The following operators are available in addition to the standard arithmetic ope
 | `tand(θ)`           | float              | float       | `tan(rad(θ))`                              | x ≠ π/2 + *k*π |
 | `!x`, `not x`       | bool               | bool        | `1 - x`                                    | x = [0, 1]     |
 | `x ^ y`             | float, float       | float       | `exp(log(x) * y)`                          | x ≠ 0          |
-| `x // y`            | float, float       | int         | `floor(x / y)`                             | y ≠ 0          |
 | `x % y`             | float, float       | float       | `x - (y * floor(x / y))`                   | y ≠ 0          |
 | `x < y`             | int, int           | bool        | `(1 - sign(x - y)) / 2`                    | x - y ≠ -0.5   |
 | `x <= y`            | int, int           | bool        | `(1 - signn(x - y)) / 2`                   | x - y ≠ 0.5    |
@@ -169,7 +167,7 @@ add_expression =
     ;
 
 mult_expression =
-    exp_expression { ( "*" | "//" | "/" | "%" ) exp_expression }
+    exp_expression { ( "*" | "/" | "%" ) exp_expression }
     ;
 
 exp_expression =
