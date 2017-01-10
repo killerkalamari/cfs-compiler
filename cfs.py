@@ -153,8 +153,8 @@ def debug_out():
   debug_parse("out")
 
 def lexer():
-  WHITESPACE = " \t\r\n;\f\v"
-  OPERATORS = ["(", ")", "!=", "!", "^", "*", "/", "%", "+", "-", "<=", "<:", "<>", "<", ">=", ">:", ">", "&&", "||", "==", "=", "?", ":", ","]
+  WHITESPACE = " \t\r\n\f\v"
+  OPERATORS = ["(", ")", "!=", "!", "^", "*", "/", "%", "+", "-", "<=", "<:", "<>", "<", ">=", ">:", ">", "&&", "||", "==", "=", "?", ":", ",", ";", "{", "}"]
   TAGS = ["pi", "e"]
   RE_NUM = re.compile(r"-?\d*\.?\d+")
   RE_ID = re.compile("[A-Za-z_][0-9A-Za-z_]*")
@@ -169,7 +169,7 @@ def lexer():
     while i < len(line):
       sub = line[i:]
       col_no = i + 1
-      
+
       # multi-line comment (end)
       if mlc:
         i = line.find("*/", i)
@@ -177,7 +177,7 @@ def lexer():
           break
         mlc = False
         i += 2
-        continue 
+        continue
 
       # whitespace
       if sub[0] in WHITESPACE:
@@ -601,14 +601,14 @@ def parse_statement():
 
 """
 function =
-    "function" ID "(" [ ID { "," ID } ] ")" <EOL> { statement <EOL> } "return" expression <EOL>
+    [ "function" | "def" | "double" ] ID "(" [ ID { "," ID } ] ")" [ ":" | "{" ] <EOL> [ "{" <EOL> ] { statement [ ";" ] <EOL> } "return" expression [ ";" ] <EOL> [ "}" <EOL> ]
     ;
 """
 def parse_function():
   global fn
 
   debug_in()
-  expect("function")
+  accepts("function") or accepts("def") or accepts("double")
   fn = expect(T_ID)
   debug_print("fn", fn)
   if getfunction(fn) is not None:
@@ -626,12 +626,19 @@ def parse_function():
   if fn == "main" and len(parms) > 0:
     error("Function `main' must not require arguments")
 
+  accepts(":") or accepts("{")
   expect("<EOL>")
+  if accepts("{"):
+    expect("<EOL>")
   while not accepts("return"):
     parse_statement()
+    accepts(";")
     expect("<EOL>")
   value = parse_expression()
+  accepts(";")
   expect("<EOL>")
+  if accepts("}"):
+    expect("<EOL>")
   functions[fn] = (parms, value)
   debug_out()
 
