@@ -20,7 +20,7 @@
 
 import sys, argparse, re, inspect, os
 
-VERSION = "1.0-0"
+VERSION = "1.0-1"
 
 # token types
 T_NAMES = ("OPERATOR", "NUMBER", "IDENTIFIER", "TAG", "(end of line)", "FUNCTION", "CONST")
@@ -154,7 +154,7 @@ def debug_out():
 
 def lexer():
   WHITESPACE = " \t\r\n;\f\v"
-  OPERATORS = ["(", ")", "!=", "!", "^", "*", "/", "%", "+", "-", "<=", "<:", "<>", "<", ">=", ">:", ">", "&&", "||", "==", "=", "?", ":", "and", "or", "not"]
+  OPERATORS = ["(", ")", "!=", "!", "^", "*", "/", "%", "+", "-", "<=", "<:", "<>", "<", ">=", ">:", ">", "&&", "||", "==", "=", "?", ":", ","]
   TAGS = ["pi", "e"]
   RE_NUM = re.compile(r"-?\d*\.?\d+")
   RE_ID = re.compile("[A-Za-z_][0-9A-Za-z_]*")
