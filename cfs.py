@@ -18,9 +18,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import sys, argparse, re, inspect, os
+import sys, argparse, re, inspect, os, math
+from decimal import Decimal
 
-VERSION = "1.0-1"
+VERSION = "1.0-2"
 
 # token types
 T_NAMES = ("OPERATOR", "NUMBER", "IDENTIFIER", "TAG", "(end of line)", "FUNCTION", "CONST")
@@ -31,6 +32,9 @@ T_TAG = 3
 T_EOL = 4
 T_FUNC = 5
 T_CONST = 6
+
+# external consts
+CONSTS = {"pi":math.pi, "e":math.e}
 
 # external function definitions
 EXTERNS = [
@@ -82,37 +86,45 @@ LIBRARY = [
   ("cosd", ("angle",), [(T_ID, "cos"), (T_OPER, "("), (T_ID, "rad"), (T_OPER, "("), (T_ID, "angle"), (T_OPER, ")"), (T_OPER, ")")]),
   ("tand", ("angle",), [(T_ID, "tan"), (T_OPER, "("), (T_ID, "rad"), (T_OPER, "("), (T_ID, "angle"), (T_OPER, ")"), (T_OPER, ")")]),
   ("signf", ("x",), [(T_ID, "abs"), (T_OPER, "("), (T_ID, "x"), (T_OPER, ")"), (T_OPER, "/"), (T_OPER, "("), (T_ID, "x"), (T_OPER, ")")]),
-  ("sign", ("i",), [(T_ID, "signf"), (T_OPER, "("), (T_ID, "i"), (T_OPER, "+"), (T_NUM, "0.5"), (T_OPER, ")")]),
-  ("signn", ("i",), [(T_ID, "signf"), (T_OPER, "("), (T_ID, "i"), (T_OPER, "-"), (T_NUM, "0.5"), (T_OPER, ")")]),
-  ("int", ("x",), [(T_ID, "floor"), (T_OPER, "("), (T_ID, "x"), (T_OPER, ")"), (T_OPER, "+"), (T_OPER, "("), (T_NUM, "1"), (T_OPER, "-"), (T_ID, "sign"), (T_OPER, "("), (T_ID, "floor"), (T_OPER, "("), (T_ID, "x"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, "2")]),
-  ("__<=", ("l", "r"), [(T_OPER, "("), (T_NUM, "1"), (T_OPER, "-"), (T_ID, "signn"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, "2")]),
-  ("__>=", ("l", "r"), [(T_OPER, "("), (T_NUM, "1"), (T_OPER, "+"), (T_ID, "sign"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, "2")]),
-  ("__<:", ("l", "r"), [(T_OPER, "("), (T_NUM, "1"), (T_OPER, "-"), (T_ID, "signf"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, "2")]),
-  ("__>:", ("l", "r"), [(T_OPER, "("), (T_NUM, "1"), (T_OPER, "+"), (T_ID, "signf"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, "2")]),
-  ("__<", ("l", "r"), [(T_OPER, "("), (T_NUM, "1"), (T_OPER, "-"), (T_ID, "sign"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, "2")]),
-  ("__>", ("l", "r"), [(T_OPER, "("), (T_NUM, "1"), (T_OPER, "+"), (T_ID, "signn"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, "2")]),
+  ("sign", ("i",), [(T_ID, "signf"), (T_OPER, "("), (T_ID, "i"), (T_OPER, "+"), (T_NUM, 0.5), (T_OPER, ")")]),
+  ("signn", ("i",), [(T_ID, "signf"), (T_OPER, "("), (T_ID, "i"), (T_OPER, "-"), (T_NUM, 0.5), (T_OPER, ")")]),
+  ("int", ("x",), [(T_ID, "floor"), (T_OPER, "("), (T_ID, "x"), (T_OPER, ")"), (T_OPER, "+"), (T_OPER, "("), (T_NUM, 1), (T_OPER, "-"), (T_ID, "sign"), (T_OPER, "("), (T_ID, "floor"), (T_OPER, "("), (T_ID, "x"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, 2)]),
+  ("__<=", ("l", "r"), [(T_OPER, "("), (T_NUM, 1), (T_OPER, "-"), (T_ID, "signn"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, 2)]),
+  ("__>=", ("l", "r"), [(T_OPER, "("), (T_NUM, 1), (T_OPER, "+"), (T_ID, "sign"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, 2)]),
+  ("__<:", ("l", "r"), [(T_OPER, "("), (T_NUM, 1), (T_OPER, "-"), (T_ID, "signf"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, 2)]),
+  ("__>:", ("l", "r"), [(T_OPER, "("), (T_NUM, 1), (T_OPER, "+"), (T_ID, "signf"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, 2)]),
+  ("__<", ("l", "r"), [(T_OPER, "("), (T_NUM, 1), (T_OPER, "-"), (T_ID, "sign"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, 2)]),
+  ("__>", ("l", "r"), [(T_OPER, "("), (T_NUM, 1), (T_OPER, "+"), (T_ID, "signn"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, 2)]),
   ("__==", ("l", "r"), [(T_OPER, "("), (T_ID, "l"), (T_OPER, ">="), (T_ID, "r"), (T_OPER, ")"), (T_OPER, "*"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "<="), (T_ID, "r"), (T_OPER, ")")]),
-  ("__!=", ("l", "r"), [(T_OPER, "("), (T_NUM, "4"), (T_OPER, "-"), (T_OPER, "("), (T_NUM, "1"), (T_OPER, "+"), (T_ID, "sign"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "*"), (T_OPER, "("), (T_NUM, "1"), (T_OPER, "-"), (T_ID, "signn"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, "4")]),
-  ("atan2", ("y", "x"), [(T_ID, "atan"), (T_OPER, "("), (T_ID, "y"), (T_OPER, "/"), (T_ID, "x"), (T_OPER, ")"), (T_OPER, "+"), (T_ID, "__<:"), (T_OPER, "("), (T_ID, "x"), (T_OPER, ","), (T_NUM, "0"), (T_OPER, ")"), (T_OPER, "*"), (T_ID, "signf"), (T_OPER, "("), (T_ID, "y"), (T_OPER, ")"), (T_OPER, "*"), (T_TAG, "pi")]),
+  ("__!=", ("l", "r"), [(T_OPER, "("), (T_NUM, 4), (T_OPER, "-"), (T_OPER, "("), (T_NUM, 1), (T_OPER, "+"), (T_ID, "sign"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "*"), (T_OPER, "("), (T_NUM, 1), (T_OPER, "-"), (T_ID, "signn"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, 4)]),
+  ("atan2", ("y", "x"), [(T_ID, "atan"), (T_OPER, "("), (T_ID, "y"), (T_OPER, "/"), (T_ID, "x"), (T_OPER, ")"), (T_OPER, "+"), (T_ID, "__<:"), (T_OPER, "("), (T_ID, "x"), (T_OPER, ","), (T_NUM, 0), (T_OPER, ")"), (T_OPER, "*"), (T_ID, "signf"), (T_OPER, "("), (T_ID, "y"), (T_OPER, ")"), (T_OPER, "*"), (T_NUM, "pi")]),
   ("atan2d", ("y", "x"), [(T_ID, "deg"), (T_OPER, "("), (T_ID, "atan2"), (T_OPER, "("), (T_ID, "y"), (T_OPER, ","), (T_ID, "x"), (T_OPER, ")"), (T_OPER, ")")])
 ]
 
 # globals
+cmdline = None
 src = None
 tokens = []
 functions = {}
 consts = {}
 ti = 0
-fn = None
-debug = False
+fn = "lexer"
+line_no = None
+col_no = None
 
-def error(message, line_no=None, col_no=None):
+def error(message):
+  global line_no, col_no
+
   if line_no is None and ti < len(tokens):
     if len(tokens[ti]) == 2:
       token_type, value = tokens[ti]
       line_no = None
     else:
-      token_type, value, line_no, col_no = tokens[ti]
+      token_type, value, l, c = tokens[ti]
+      if l is not None:
+        line_no = l
+      if c is not None:
+        col_no = c
   if line_no is not None:
     line = src[line_no - 1].rstrip("\r\n")
     posinfo = "Line {0}, Col {1}, `{2}':\n".format(line_no, col_no, line)
@@ -120,25 +132,28 @@ def error(message, line_no=None, col_no=None):
     posinfo = ""
   sys.exit("{0}{1}.".format(posinfo, message))
 
-def debug_print(var, value):
-  if debug:
-    if type(value).__name__ == "str":
-      sys.stderr.write("{0} = `{1}'\n".format(var, value))
+def debug_print(var, value=None):
+  if cmdline.debug:
+    if value is None:
+      sys.stderr.write("[{0}] {1}\n".format(fn, var))
     else:
-      sys.stderr.write("{0} = {1}\n".format(var, value))
+      if type(value).__name__ == "str":
+        sys.stderr.write("[{0}] {1} = `{2}'\n".format(fn, var, value))
+      else:
+        sys.stderr.write("[{0}] {1} = {2}\n".format(fn, var, value))
 
 def debug_parse(d):
-  if not debug:
+  if not cmdline.debug:
     return
   if ti < len(tokens):
     token = tokens[ti]
     if len(token) == 2:
       token_type, value = token
-      line_no = 0
-      col_no = 0
+      line_no = None
+      col_no = None
       line = ""
     else:
-      token_type, value, line_no, col_no = token
+      token_type, value, line_no, col_no = tokens[ti]
       line = src[line_no - 1]
       line = (line[:col_no - 1].strip() + " ===> " + line[col_no - 1:]).strip()
   else:
@@ -153,10 +168,11 @@ def debug_out():
   debug_parse("out")
 
 def lexer():
+  global line_no, col_no
+
   WHITESPACE = " \t\r\n\f\v"
-  OPERATORS = ["(", ")", "!=", "!", "^", "*", "/", "%", "+", "-", "<=", "<:", "<>", "<", ">=", ">:", ">", "&&", "||", "==", "=", "?", ":", ",", ";", "{", "}"]
-  TAGS = ["pi", "e"]
-  RE_NUM = re.compile(r"-?\d*\.?\d+")
+  OPERATORS = ("(", ")", "!=", "!", "^", "*", "/", "%", "+", "-", "<=", "<:", "<>", "<", ">=", ">:", ">", "&&", "||", "==", "=", "?", ":", ",", ";", "{", "}")
+  RE_NUM = re.compile(r"\d*\.?\d+")
   RE_ID = re.compile("[A-Za-z_][0-9A-Za-z_]*")
   RE_TAG = re.compile(r"#[0-9A-Za-z_]*#")
 
@@ -199,13 +215,12 @@ def lexer():
       if match:
         s = match.group()
 
-        # add a leading zero to bare decimal points
+        # add a leading zero to bare decimal point
         if s[0] == ".":
           s = "0" + s
-        elif s[0:2] == "-.":
-          s = "-0" + s[1:]
 
-        tokens.append((T_NUM, s, line_no, col_no))
+        num = float(s) if "." in s else int(s)
+        tokens.append((T_NUM, num, line_no, col_no))
         i += len(s)
         term = True
         continue
@@ -226,8 +241,8 @@ def lexer():
       match = RE_ID.match(sub)
       if match:
         s = match.group()
-        if s in TAGS:
-          tokens.append((T_TAG, s, line_no, col_no))
+        if s in CONSTS:
+          tokens.append((T_NUM, s, line_no, col_no))
         else:
           tokens.append((T_ID, s, line_no, col_no))
         i += len(s)
@@ -243,7 +258,7 @@ def lexer():
         term = True
         continue
 
-      error("Unrecognized input: `{0}'".format(sub), line_no, col_no)
+      error("Unrecognized input: `{0}'".format(sub))
     if term:
       tokens.append((T_EOL, "<EOL>", line_no, col_no))
 
@@ -255,12 +270,16 @@ def consume():
   return value
 
 def expect(expected):
+  global line_no, col_no
+
   if len(tokens[ti]) == 2:
     token_type, value = tokens[ti]
-    line_no = 0
-    col_no = 0
   else:
-    token_type, value, line_no, col_no = tokens[ti]
+    token_type, value, l, c = tokens[ti]
+    if l is not None:
+      line_no = l
+    if c is not None:
+      col_no = c
   istype = type(expected).__name__ == "int"
   if istype:
     if token_type != expected:
@@ -270,52 +289,240 @@ def expect(expected):
   return consume()
 
 def accepts(expected, discard=True):
+  global line_no, col_no
+
   if ti >= len(tokens):
     return False
   if len(tokens[ti]) == 2:
     token_type, value = tokens[ti]
-    line_no = 0
-    col_no = 0
   else:
-    token_type, value, line_no, col_no = tokens[ti]
+    token_type, value, l, c = tokens[ti]
+    if l is not None:
+      line_no = l
+    if c is not None:
+      col_no = c
   istype = type(expected).__name__ == "int"
   accepted = (istype and token_type == expected) or (not istype and value == expected)
   if accepted and discard:
     consume()
   return accepted
 
-def getfunction(name):
+def getfunction(function_name):
   try:
-    return functions[name]
+    return functions[function_name]
   except:
     return None
 
-def getconst(name):
+def getconst(const_name):
   try:
-    return consts[(fn, name)]
+    return consts[(fn, const_name)]
   except:
     return None
 
-def deref_function(name, args):
-  value = [(T_OPER, "(")]
-  fn_parms, fn_value = functions[name]
+def is_num(expr1, expr2=None, expr3=None):
+  if expr2 == None:
+    return len(expr1) == 1 and expr1[0][0] == T_NUM
+  if expr3 == None:
+    return expr1[-1][0] == T_NUM and len(expr2) == 1 and expr2[0][0] == T_NUM
+  return expr1[-1][0] == T_NUM and len(expr2) == 1 and expr2[0][0] == T_NUM and len(expr3) == 1 and expr3[0][0] == T_NUM
+
+def is_tag(expr1):
+  return expr1[-1][0] == T_TAG and len(expr1) == 1
+
+def deref_function(function_name, args):
+  value = []
+  fn_parms, fn_value = functions[function_name]
   for fvalue in fn_value:
-    if fvalue[0] == T_CONST and fvalue[1][0] == name:
-      cname = fvalue[1][1]
+    if fvalue[0] == T_CONST and fvalue[1][0] == function_name:
+      const_name = fvalue[1][1]
       try:
-        fvalue = args[fn_parms.index(cname)]
+        fvalue = [(T_OPER, "(")] + args[fn_parms.index(const_name)] + [(T_OPER, ")")]
       except:
-        error("Missing definition for const `{0}' in function `{1}'".format(cname, name))
+        if cmdline.allow_const:
+          fvalue = [fvalue]
+        else:
+          error("Missing definition for const `{0}' in function `{1}'".format(const_name, function_name))
     else:
       fvalue = [fvalue]
     value += fvalue
-  value += [(T_OPER, ")")]
+  if not (is_num(value) or is_tag(value)):
+    value = [(T_OPER, "(")] + value + [(T_OPER, ")")]
   return value
+
+def serialize_float(value):
+  # http://stackoverflow.com/questions/6416474
+  p = ("%.*f" % (16, value)).partition(".")
+  return "".join((p[0], p[1], p[2][0], p[2][1:].rstrip("0")))
+
+def serialize_expression(expr, allow_const=True):
+  # serialize expression
+  expr_s = ""
+  for value in expr:
+    if value[0] == T_CONST:
+      if allow_const:
+        value = value[1][1]
+      else:
+        function_name, const_name = value[1]
+        error("Missing definition for const `{0}' in function `{1}'".format(const_name, function_name))
+    else:
+      value = value[1]
+    if type(value).__name__ == "float":
+      value_s = serialize_float(value)
+    else:
+      value_s = str(value)
+    if value_s.endswith(".0"):
+      value_s = value_s[:-2]
+    expr_s += value_s
+  return expr_s
+
+def simplify_expression(function_name, expr):
+  global fn, tokens, ti
+  for token in expr:
+    if token[0] == T_CONST:
+      return expr
+
+  # save globals
+  fn_orig = fn
+  tokens_orig = tokens
+  ti_orig = ti
+  debug_orig = cmdline.debug
+
+  # set new globals
+  fn = function_name
+  tokens = expr
+  ti = 0
+  cmdline.debug = False
+
+  # replace functions with id's
+  for i in range(len(tokens)):
+    if tokens[i][0] == T_FUNC:
+      tokens[i][0] = T_ID
+
+  # parse expr
+  expr = parse_expression()
+
+  # restore globals
+  fn = fn_orig
+  tokens = tokens_orig
+  ti = ti_orig
+  cmdline.debug = debug_orig
+  return expr
+
+def calc_function(expr):
+  args = expr[2:-1]
+  if not is_num(args):
+    return expr
+  arg1 = args[0][1]
+  function_name = expr[0][1]
+  if function_name == "abs":
+    token = [[T_NUM, abs(arg1)]]
+  elif function_name == "sin":
+    token = [[T_NUM, math.sin(arg1)]]
+  elif function_name == "cos":
+    token = [[T_NUM, math.cos(arg1)]]
+  elif function_name == "tan":
+    token = [[T_NUM, math.tan(arg1)]]
+  elif function_name == "asin":
+    token = [[T_NUM, math.asin(arg1)]]
+  elif function_name == "acos":
+    token = [[T_NUM, math.acos(arg1)]]
+  elif function_name == "atan":
+    token = [[T_NUM, math.atan(arg1)]]
+  elif function_name == "sinh":
+    token = [[T_NUM, math.sinh(arg1)]]
+  elif function_name == "cosh":
+    token = [[T_NUM, math.cosh(arg1)]]
+  elif function_name == "tanh":
+    token = [[T_NUM, math.tanh(arg1)]]
+  elif function_name == "round":
+    token = [[T_NUM, round(arg1)]]
+  elif function_name == "ceil":
+    token = [[T_NUM, math.ceil(arg1)]]
+  elif function_name == "floor":
+    token = [[T_NUM, math.floor(arg1)]]
+  elif function_name == "log":
+    token = [[T_NUM, math.log(arg1)]]
+  elif function_name == "log2":
+    token = [[T_NUM, math.log(arg1) / math.log(2)]]
+  elif function_name == "log10":
+    token = [[T_NUM, math.log10(arg1)]]
+  elif function_name == "sqrt":
+    token = [[T_NUM, math.sqrt(arg1)]]
+  elif function_name == "cbrt":
+    token = [[T_NUM, arg1**(1.0/3)]]
+  elif function_name == "exp":
+    token = [[T_NUM, math.exp(arg1)]]
+  elif function_name == "expm1":
+    token = [[T_NUM, math.exp(arg1) - 1]]
+  elif function_name == "deg":
+    token = [[T_NUM, arg1 * 180 / math.pi]]
+  elif function_name == "rad":
+    token = [[T_NUM, arg1 * math.pi / 180]]
+  return token
+
+def deref_tag(token):
+  value = token[1]
+  try:
+    return CONSTS[value]
+  except:
+    return value
+
+def calc_expression(operator, expr1, expr2=None, expr3=None):
+  arg1 = None
+  arg2 = None
+  arg3 = None
+  if expr2 == None:
+    arg1 = deref_tag(expr1[0])
+  else:
+    arg1 = deref_tag(expr1[-1])
+    arg2 = deref_tag(expr2[0])
+    if expr3 != None:
+      arg3 = deref_tag(expr3[0])
+  if operator == "(-)":
+    value = -arg1
+  elif operator == "!":
+    value = 1 - arg1
+  elif operator == "^":
+    value = arg1 ** arg2
+  elif operator == "*" or operator == "&&" or operator == "?":
+    value = arg1 * arg2
+  elif operator == "/":
+    try:
+      value = arg1 / float(arg2)
+    except ZeroDivisionError as e:
+      error("Division by zero calculating `{0} / {1}'".format(arg1, arg2))
+  elif operator == "%":
+    try:
+      value = arg1 % arg2
+    except ZeroDivisionError as e:
+      error("Division by zero calculating `{0} % {1}'".format(arg1, arg2))
+  elif operator == "+":
+    value = arg1 + arg2
+  elif operator == "-":
+    value = arg1 - arg2
+  elif operator == "<=":
+    value = int(arg1 <= arg2)
+  elif operator == ">=":
+    value = int(arg1 >= arg2)
+  elif operator == "<:" or operator == "<":
+    value = int(arg1 < arg2)
+  elif operator == ">:" or operator == ">":
+    value = int(arg1 > arg2)
+  elif operator == "==":
+    value = int(arg1 == arg2)
+  elif operator == "!=":
+    value = int(arg1 != arg2)
+  elif operator == "||":
+    value = 1 - (1 - arg1) * (1 - arg2)
+  elif operator == "?:":
+    value = arg1 * (arg2 - arg3) + arg3
+  debug_print("calc: operator=[{0}], exprs=[{1} {2} {3}], args=[{4} {5} {6}]={7}".format(operator, expr1, expr2, expr3, arg1, arg2, arg3, value))
+  token = [[T_NUM, value]]
+  return token
 
 """
 primary_expression =
     "(" expression ")"
-    | "if" "(" expression "?" expression [ ":" expression ] ")"
     | ID [ "(" [ expression { "," expression } ] ")" ]
     | NUM
     | TAG
@@ -323,11 +530,15 @@ primary_expression =
 """
 def parse_primary_expression():
   debug_in()
-  value = []
+  lvalue = []
 
-  # (x)
+  # parentheses
   if accepts("("):
-    value += [(T_OPER, "(")] + parse_expression() + [(T_OPER, ")")]
+    expr = parse_expression()
+    if is_num(expr) or is_tag(expr):
+      lvalue += expr
+    else:
+      lvalue += [(T_OPER, "(")] + expr + [(T_OPER, ")")]
     expect(")")
 
   # consts and functions
@@ -336,64 +547,88 @@ def parse_primary_expression():
 
     # function
     if accepts("("):
+      function_name = name
+      debug_print("==[start {0}]".format(function_name) + ("=" * (70 - len(function_name))))
       # get function declaration and generated expression
-      function = getfunction(name)
+      function = getfunction(function_name)
       if function is None:
-        error("Missing function declaration for `{0}'".format(name))
-      fn_parms, fn_value = function
+        error("Missing function declaration for `{0}'".format(function_name))
+      fn_parms, fn_expr = function
 
       # compare args to parms
       args = []
       if not accepts(")"):
-        args.append(parse_expression())
+        debug_print("args function_name=[{0}], arg#={1}, expr=`{2}' ===> `{3}'".format(function_name, len(args), serialize_expression(tokens[:ti]), serialize_expression(tokens[ti:])))
+        expr = parse_expression()
+        args.append(expr)
+        debug_print("expr function_name=[{0}], arg#={1}, expr=`{2}'".format(function_name, len(args), serialize_expression(expr)))
+
         while not accepts(")"):
           expect(",")
-          args.append(parse_expression())
+          debug_print("args function_name=[{0}], arg#={1}, expr=`{2}' ===> `{3}'".format(function_name, len(args), serialize_expression(tokens[:ti]), serialize_expression(tokens[ti:])))
+          expr = parse_expression()
+          args.append(expr)
+          debug_print("expr function_name=[{0}], arg#={1}, expr=`{2}'".format(function_name, len(args), serialize_expression(expr)))
+        debug_print("args (end) function_name=[{0}], arg#={1}, expr=`{2}' ===> `{3}'".format(function_name, len(args), serialize_expression(tokens[:ti]), serialize_expression(tokens[ti:])))
       if len(args) != len(fn_parms):
         if len(fn_parms) > 0:
           parms = ": `{0}'".format(", ".join(fn_parms))
         else:
           parms = ""
-        error("Function `{0}' expects {1} arguments{2}, got {3}".format(name, len(fn_parms), parms, len(args)))
+        error("Function `{0}' expects {1} arguments{2}, got {3}".format(function_name, len(fn_parms), parms, len(args)))
 
       # extern functions have no associated expression except function call
-      if fn_value is None:
-        value += [(T_FUNC, name), (T_OPER, "(")]
+      if fn_expr is None:
+        fn_expr = [[T_FUNC, function_name], (T_OPER, "(")]
         first = True
         for arg in args:
           if first:
             first = False
           else:
-            value += [(T_OPER, ",")]
-          value += arg
-        value += [(T_OPER, ")")]
+            fn_expr += [(T_OPER, ",")]
+          fn_expr += arg
+        fn_expr += [(T_OPER, ")")]
+        lvalue += calc_function(fn_expr)
 
       # user functions or interns: substitute args for locals
       else:
-        value += deref_function(name, args)
+        expr = deref_function(function_name, args)
+        debug_print("deref: {0}".format(serialize_expression(expr)))
+        expr = simplify_expression(function_name, expr)
+        debug_print("simplify: {0}".format(serialize_expression(expr)))
+        lvalue += expr
+      debug_print("==[end {0}]".format(function_name) + ("=" * (72 - len(function_name))))
 
     # const
     else:
-      cvalue = getconst(name)
-      if cvalue is None:
-        value += [(T_CONST, (fn, name))]
+      const_name = name
+      const_expr = getconst(const_name)
+      if const_expr is None:
+        lvalue += [(T_CONST, (fn, const_name))]
       else:
-        value += [(T_OPER, "(")] + cvalue + [(T_OPER, ")")]
+        if is_num(const_expr):
+          lvalue += const_expr
+        else:
+          lvalue += [(T_OPER, "(")] + const_expr + [(T_OPER, ")")]
 
   # numeric value
   elif accepts(T_NUM, False):
     num = expect(T_NUM)
     debug_print("num", num)
-    value += [(T_NUM, num)]
+    lvalue += [[T_NUM, num]]
 
   # external tag
-  else:
+  elif accepts(T_TAG, False):
     tag = expect(T_TAG)
     debug_print("tag", tag)
-    value += [(T_TAG, tag)]
+    lvalue += [[T_TAG, tag]]
+
+  # unexpected input
+  else:
+    error("Unexpected or incomplete input")
 
   debug_out()
-  return value
+  return lvalue
 
 """
 unary_expression =
@@ -405,9 +640,17 @@ unary_expression =
 def parse_unary_expression():
   debug_in()
   if accepts("-"):
-    lvalue = [(T_OPER, "-")] + parse_primary_expression()
+    rvalue = parse_primary_expression()
+    if is_num(rvalue):
+      lvalue = calc_expression("(-)", rvalue)
+    else:
+      lvalue = [(T_OPER, "-")] + rvalue
   elif accepts("!") or accepts("not"):
-    lvalue = [(T_OPER, "("), (T_NUM, "1"), (T_OPER, "-")] + parse_primary_expression() + [(T_OPER, ")")]
+    rvalue = parse_primary_expression()
+    if is_num(rvalue):
+      lvalue = calc_expression("!", rvalue)
+    else:
+      lvalue = simplify_expression(fn, [(T_OPER, "("), (T_NUM, 1), (T_OPER, "-")] + rvalue + [(T_OPER, ")")])
   else:
     lvalue = parse_primary_expression()
   debug_out()
@@ -423,7 +666,10 @@ def parse_exp_expression():
   lvalue = parse_unary_expression()
   if accepts("^"):
     rvalue = parse_unary_expression()
-    lvalue = [(T_FUNC, "exp"), (T_OPER, "("), (T_FUNC, "log"), (T_OPER, "(")] + lvalue + [(T_OPER, ")"), (T_OPER, "*")] + rvalue + [(T_FUNC, ")")]
+    if is_num(lvalue, rvalue):
+      lvalue = lvalue[:-1] + calc_expression("^", lvalue, rvalue)
+    else:
+      lvalue = simplify_expression(fn, [(T_ID, "exp"), (T_OPER, "("), (T_ID, "log"), (T_OPER, "(")] + lvalue + [(T_OPER, ")"), (T_OPER, "*")] + rvalue + [(T_OPER, ")")])
   debug_out()
   return lvalue
 
@@ -438,13 +684,22 @@ def parse_mult_expression():
   while True:
     if accepts("*"):
       rvalue = parse_exp_expression()
-      lvalue += [(T_OPER, "*")] + rvalue
+      if is_num(lvalue, rvalue):
+        lvalue = lvalue[:-1] + calc_expression("*", lvalue, rvalue)
+      else:
+        lvalue += [(T_OPER, "*")] + rvalue
     elif accepts("/"):
       rvalue = parse_exp_expression()
-      lvalue += [(T_OPER, "/")] + rvalue
+      if is_num(lvalue, rvalue):
+        lvalue = lvalue[:-1] + calc_expression("/", lvalue, rvalue)
+      else:
+        lvalue += [(T_OPER, "/")] + rvalue
     elif accepts("%"):
       rvalue = parse_exp_expression()
-      lvalue += [(T_OPER, "-"), (T_OPER, "(")] + rvalue + [(T_OPER, "*"), (T_FUNC, "floor"), (T_OPER, "(")] + lvalue + [(T_OPER, "/")] + rvalue + [(T_OPER, ")"), (T_OPER, ")")]
+      if is_num(lvalue, rvalue):
+        lvalue = lvalue[:-1] + calc_expression("%", lvalue, rvalue)
+      else:
+        lvalue = simplify_expression(fn, lvalue + [(T_OPER, "-"), (T_OPER, "(")] + rvalue + [(T_OPER, "*"), [T_ID, "floor"], (T_OPER, "(")] + lvalue + [(T_OPER, "/")] + rvalue + [(T_OPER, ")"), (T_OPER, ")")])
     else:
       break
   debug_out()
@@ -461,10 +716,16 @@ def parse_add_expression():
   while True:
     if accepts("+"):
       rvalue = parse_mult_expression()
-      lvalue += [(T_OPER, "+")] + rvalue
+      if is_num(lvalue, rvalue):
+        lvalue = lvalue[:-1] + calc_expression("+", lvalue, rvalue)
+      else:
+        lvalue += [(T_OPER, "+")] + rvalue
     elif accepts("-"):
       rvalue = parse_mult_expression()
-      lvalue += [(T_OPER, "-")] + rvalue
+      if is_num(lvalue, rvalue):
+        lvalue = lvalue[:-1] + calc_expression("-", lvalue, rvalue)
+      else:
+        lvalue += [(T_OPER, "-")] + rvalue
     else:
       break
   debug_out()
@@ -481,22 +742,40 @@ def parse_rel_expression():
   while True:
     if accepts("<="):
       rvalue = parse_add_expression()
-      lvalue = deref_function("__<=", (lvalue, rvalue))
+      if is_num(lvalue, rvalue):
+        lvalue = lvalue[:-1] + calc_expression("<=", lvalue, rvalue)
+      else:
+        lvalue = simplify_expression(fn, deref_function("__<=", (lvalue, rvalue)))
     elif accepts(">="):
       rvalue = parse_add_expression()
-      lvalue = deref_function("__>=", (lvalue, rvalue))
+      if is_num(lvalue, rvalue):
+        lvalue = lvalue[:-1] + calc_expression(">=", lvalue, rvalue)
+      else:
+        lvalue = simplify_expression(fn, deref_function("__>=", (lvalue, rvalue)))
     elif accepts("<:"):
       rvalue = parse_add_expression()
-      lvalue = deref_function("__<:", (lvalue, rvalue))
+      if is_num(lvalue, rvalue):
+        lvalue = lvalue[:-1] + calc_expression("<:", lvalue, rvalue)
+      else:
+        lvalue = simplify_expression(fn, deref_function("__<:", (lvalue, rvalue)))
     elif accepts(">:"):
       rvalue = parse_add_expression()
-      lvalue = deref_function("__>:", (lvalue, rvalue))
+      if is_num(lvalue, rvalue):
+        lvalue = lvalue[:-1] + calc_expression(">:", lvalue, rvalue)
+      else:
+        lvalue = simplify_expression(fn, deref_function("__>:", (lvalue, rvalue)))
     elif accepts("<"):
       rvalue = parse_add_expression()
-      lvalue = deref_function("__<", (lvalue, rvalue))
+      if is_num(lvalue, rvalue):
+        lvalue = lvalue[:-1] + calc_expression("<", lvalue, rvalue)
+      else:
+        lvalue = simplify_expression(fn, deref_function("__<", (lvalue, rvalue)))
     elif accepts(">"):
       rvalue = parse_add_expression()
-      lvalue = deref_function("__>", (lvalue, rvalue))
+      if is_num(lvalue, rvalue):
+        lvalue = lvalue[:-1] + calc_expression(">", lvalue, rvalue)
+      else:
+        lvalue = simplify_expression(fn, deref_function("__>", (lvalue, rvalue)))
     else:
       break
   debug_out()
@@ -513,10 +792,16 @@ def parse_equ_expression():
   while True:
     if accepts("==") or accepts("="):
       rvalue = parse_rel_expression()
-      lvalue = deref_function("__==", (lvalue, rvalue))
+      if is_num(lvalue, rvalue):
+        lvalue = lvalue[:-1] + calc_expression("==", lvalue, rvalue)
+      else:
+        lvalue = simplify_expression(fn, deref_function("__==", (lvalue, rvalue)))
     elif accepts("!=") or accepts("<>"):
       rvalue = parse_rel_expression()
-      lvalue = deref_function("__!=", (lvalue, rvalue))
+      if is_num(lvalue, rvalue):
+        lvalue = lvalue[:-1] + calc_expression("!=", lvalue, rvalue)
+      else:
+        lvalue = simplify_expression(fn, deref_function("__!=", (lvalue, rvalue)))
     else:
       break
   debug_out()
@@ -533,7 +818,10 @@ def parse_and_expression():
   while True:
     if accepts("&&") or accepts("and"):
       rvalue = parse_equ_expression()
-      lvalue = [(T_OPER, "(")] + lvalue + [(T_OPER, "*")] + rvalue + [(T_OPER, ")")]
+      if is_num(lvalue, rvalue):
+        lvalue = lvalue[:-1] + calc_expression("&&", lvalue, rvalue)
+      else:
+        lvalue = simplify_expression(fn, [(T_OPER, "(")] + lvalue + [(T_OPER, "*")] + rvalue + [(T_OPER, ")")])
     else:
       break
   debug_out()
@@ -550,7 +838,10 @@ def parse_or_expression():
   while True:
     if accepts("||") or accepts("or"):
       rvalue = parse_and_expression()
-      lvalue = [(T_OPER, "("), (T_NUM, "1"), (T_OPER, "-"), (T_OPER, "("), (T_NUM, "1"), (T_OPER, "-")] + lvalue + [(T_OPER, ")"), (T_OPER, "*"), (T_OPER, "("), (T_NUM, "1"), (T_OPER, "-")] + rvalue + [(T_OPER, ")"), (T_OPER, ")")]
+      if is_num(lvalue, rvalue):
+        lvalue = lvalue[:-1] + calc_expression("||", lvalue, rvalue)
+      else:
+        lvalue = simplify_expression(fn, [(T_OPER, "("), (T_NUM, 1), (T_OPER, "-"), (T_OPER, "("), (T_NUM, 1), (T_OPER, "-")] + lvalue + [(T_OPER, ")"), (T_OPER, "*"), (T_OPER, "("), (T_NUM, 1), (T_OPER, "-")] + rvalue + [(T_OPER, ")"), (T_OPER, ")")])
     else:
       break
   debug_out()
@@ -575,9 +866,15 @@ def parse_expression():
     tvalue = parse_expression()
     if accepts(":"):
       fvalue = parse_expression()
-      lvalue = [(T_OPER, "(")] + bvalue + [(T_OPER, "*"), (T_OPER, "(")] + tvalue + [(T_OPER, "-")] + fvalue + [(T_OPER, ")"), (T_OPER, "+")] + fvalue + [(T_OPER, ")")]
+      if is_num(bvalue, tvalue, fvalue):
+        lvalue = lvalue[:-1] + calc_expression("?:", bvalue, tvalue, fvalue)
+      else:
+        lvalue = simplify_expression(fn, [(T_OPER, "(")] + bvalue + [(T_OPER, "*"), (T_OPER, "(")] + tvalue + [(T_OPER, "-")] + fvalue + [(T_OPER, ")"), (T_OPER, "+")] + fvalue + [(T_OPER, ")")])
     else:
-      lvalue = [(T_OPER, "(")] + bvalue + [(T_OPER, "*")] + tvalue + [(T_OPER, ")")]
+      if is_num(bvalue, tvalue):
+        lvalue = lvalue[:-1] + calc_expression("?", bvalue, tvalue)
+      else:
+        lvalue = simplify_expression(fn, [(T_OPER, "(")] + bvalue + [(T_OPER, "*")] + tvalue + [(T_OPER, ")")])
     expect(")")
   else:
     lvalue = parse_or_expression()
@@ -592,11 +889,13 @@ statement =
 """
 def parse_statement():
   debug_in()
-  name = expect(T_ID)
+  const_name = expect(T_ID)
+  if getconst(const_name) is not None:
+    error("Duplicate const declaration for `{0}'".format(const_name))
   expect("=")
   rvalue = parse_expression()
-  consts[(fn, name)] = rvalue
-  debug_print("{0}.{1}".format(fn, name), rvalue)
+  consts[(fn, const_name)] = rvalue
+  debug_print("{0}.{1}".format(fn, const_name), rvalue)
   debug_out()
 
 """
@@ -634,12 +933,12 @@ def parse_function():
     parse_statement()
     accepts(";")
     expect("<EOL>")
-  value = parse_expression()
+  expr = parse_expression()
   accepts(";")
   expect("<EOL>")
   if accepts("}"):
     expect("<EOL>")
-  functions[fn] = (parms, value)
+  functions[fn] = (parms, expr)
   debug_out()
 
 """
@@ -659,33 +958,30 @@ def parse():
   parse_program()
 
 def main():
-  global src, debug, fn, tokens, ti
+  global src, cmdline, fn, tokens, ti
 
   # parse command line arguments
   parser = argparse.ArgumentParser(prog="cfs", description="Closed-Form Script Compiler.")
   parser.add_argument("-v", "--version", action="version", version="%(prog)s " + VERSION)
   parser.add_argument("-d", action="store_true", dest="debug", help="output verbose debugging information")
+  parser.add_argument("--allow-const", action="store_true", dest="allow_const", help="don't generate an error on missing const")
   parser.add_argument("-o", dest="dest", metavar="DEST", help="write output into file DEST instead of stdout")
   parser.add_argument("src", metavar="SOURCE", help="file containing program to compile")
-  args = parser.parse_args()
-  debug = args.debug
+  cmdline = parser.parse_args()
 
   # load external and library functions
+  debug_orig = cmdline.debug
+  cmdline.debug = False
   for name, parms in EXTERNS:
     functions[name] = (parms, None)
-  for name, parms, value in LIBRARY:
-    fn = name
-    tokens = value
-    ti = 0
-    value = parse_expression()
-    functions[name] = (parms, value)
-  tokens = []
-  ti = 0
-  fn = None
+  for name, parms, expr in LIBRARY:
+    expr = simplify_expression(name, expr)
+    functions[name] = (parms, expr)
+  cmdline.debug = debug_orig
 
   # read source code
   try:
-    f = open(args.src, "r")
+    f = open(cmdline.src, "r")
     src = f.readlines()
     f.close()
   except IOError as e:
@@ -705,24 +1001,16 @@ def main():
     error("Missing required function declaration: `main'")
 
   # serialize expression
-  expr = functions["main"]
+  expr = functions["main"][1]
   debug_print("expr", expr)
-  expr_s = "("
-  for value in expr[1]:
-    if value[0] == T_CONST:
-      fname, cname = value[1]
-      error("Missing definition for const `{0}' in function `{1}'".format(cname, fname))
-    else:
-      value = value[1]
-    expr_s += value
-  expr_s += ")"
+  expr_s = "(" + serialize_expression(expr, cmdline.allow_const) + ")"
 
   # output expression
-  if args.dest is None:
+  if cmdline.dest is None:
     print(expr_s)
   else:
     # open output file
-    outfile = open(args.dest, "w")
+    outfile = open(cmdline.dest, "w")
     outfile.write(expr_s + os.linesep)
     outfile.close()
 
