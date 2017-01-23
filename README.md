@@ -101,7 +101,7 @@ The following operators are available in addition to the standard arithmetic ope
 | ------------------- | ------------------ | ----------- | -------------------------------------------| -------------- |
 | `acosd(x)`          | float              | float       | `deg(acos(x))`                             | −1 ≤ x ≤ 1     |
 | `asind(x)`          | float              | float       | `deg(asin(x))`                             | −1 ≤ x ≤ 1     |
-| `atan2(y, x)`       | float, float       | float       | `atan(y / x) + (x <. 0) * signf(y) * pi`   | x ≠ 0, y ≠ 0   |
+| `atan2(y, x)`       | float, float       | float       | `atan(y / x) + (x <: 0) * signf(y) * pi`   | x ≠ 0, y ≠ 0   |
 | `atan2d(y, x)`      | float, float       | float       | `deg(atan2(y, x))`                         | x ≠ 0, y ≠ 0   |
 | `atand(x)`          | float              | float       | `deg(atan(x))`                             | ℝ              |
 | `cosd(θ)`           | float              | float       | `cos(rad(θ))`                              | ℝ              |
@@ -134,7 +134,9 @@ program =
     ;
 
 function =
-    [ "function" | "def" | "double" ] ID "(" [ ID { "," ID } ] ")" [ ":" | "{" ] ␤ [ "{" ␤ ] { statement [ ";" ] ␤ } "return" expression [ ";" ] ␤ [ "}" ␤ ] 
+    [ "function" | "def" | "double" ] ID "(" [ ID { "," ID } ] ")" [ ":" | "{" ] ␤
+        [ "{" ␤ ] { statement [ ";" ] ␤ } "return" expression [ ";" ] ␤ 
+        [ "}" ␤ ] 
     ;
 
 statement =
