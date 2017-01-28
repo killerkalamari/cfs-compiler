@@ -21,7 +21,7 @@
 import sys, argparse, re, inspect, os, math
 from decimal import Decimal
 
-VERSION = "1.0-2"
+VERSION = "1.0-3"
 
 # token types
 T_NAMES = ("OPERATOR", "NUMBER", "IDENTIFIER", "TAG", "(end of line)", "FUNCTION", "CONST")
@@ -180,7 +180,6 @@ def lexer():
   for line_no, line in enumerate(src):
     line_no += 1
     line = line.rstrip("\r\n")
-    term = False
     i = 0
     while i < len(line):
       sub = line[i:]
@@ -222,7 +221,6 @@ def lexer():
         num = float(s) if "." in s else int(s)
         tokens.append((T_NUM, num, line_no, col_no))
         i += len(s)
-        term = True
         continue
 
       # operator
@@ -231,7 +229,6 @@ def lexer():
         if sub.startswith(op):
           tokens.append((T_OPER, op, line_no, col_no))
           i += len(op)
-          term = True
           found_op = True
           break
       if found_op:
@@ -246,7 +243,6 @@ def lexer():
         else:
           tokens.append((T_ID, s, line_no, col_no))
         i += len(s)
-        term = True
         continue
 
       # external tag
@@ -255,12 +251,9 @@ def lexer():
         s = match.group()
         tokens.append((T_TAG, s, line_no, col_no))
         i += len(s)
-        term = True
         continue
 
       error("Unrecognized input: `{0}'".format(sub))
-    if term:
-      tokens.append((T_EOL, "<EOL>", line_no, col_no))
 
 def consume():
   global ti
@@ -272,6 +265,8 @@ def consume():
 def expect(expected):
   global line_no, col_no
 
+  if ti >= len(tokens):
+    error("Unexpected end of input")
   if len(tokens[ti]) == 2:
     token_type, value = tokens[ti]
   else:
@@ -523,7 +518,7 @@ def calc_expression(operator, expr1, expr2=None, expr3=None):
 """
 primary_expression =
     "(" expression ")"
-    | ID [ "(" [ expression { "," expression } ] ")" ]
+    | ID [ "(" [ expression { [ "," ] expression } ] ")" ]
     | NUM
     | TAG
     ;
@@ -564,7 +559,7 @@ def parse_primary_expression():
         debug_print("expr function_name=[{0}], arg#={1}, expr=`{2}'".format(function_name, len(args), serialize_expression(expr)))
 
         while not accepts(")"):
-          expect(",")
+          accepts(",")
           debug_print("args function_name=[{0}], arg#={1}, expr=`{2}' ===> `{3}'".format(function_name, len(args), serialize_expression(tokens[:ti]), serialize_expression(tokens[ti:])))
           expr = parse_expression()
           args.append(expr)
@@ -584,8 +579,6 @@ def parse_primary_expression():
         for arg in args:
           if first:
             first = False
-          else:
-            fn_expr += [(T_OPER, ",")]
           fn_expr += arg
         fn_expr += [(T_OPER, ")")]
         lvalue += calc_function(fn_expr)
@@ -658,18 +651,21 @@ def parse_unary_expression():
 
 """
 exp_expression =
-    unary_expression [ "^" unary_expression ]
+    unary_expression { "^" unary_expression }
     ;
 """
 def parse_exp_expression():
   debug_in()
   lvalue = parse_unary_expression()
-  if accepts("^"):
-    rvalue = parse_unary_expression()
-    if is_num(lvalue, rvalue):
-      lvalue = lvalue[:-1] + calc_expression("^", lvalue, rvalue)
+  while True:
+    if accepts("^"):
+      rvalue = parse_unary_expression()
+      if is_num(lvalue, rvalue):
+        lvalue = lvalue[:-1] + calc_expression("^", lvalue, rvalue)
+      else:
+        lvalue = simplify_expression(fn, [(T_ID, "exp"), (T_OPER, "("), (T_ID, "log"), (T_OPER, "(")] + lvalue + [(T_OPER, ")"), (T_OPER, "*")] + rvalue + [(T_OPER, ")")])
     else:
-      lvalue = simplify_expression(fn, [(T_ID, "exp"), (T_OPER, "("), (T_ID, "log"), (T_OPER, "(")] + lvalue + [(T_OPER, ")"), (T_OPER, "*")] + rvalue + [(T_OPER, ")")])
+      break
   debug_out()
   return lvalue
 
@@ -900,7 +896,7 @@ def parse_statement():
 
 """
 function =
-    [ "function" | "def" | "double" ] ID "(" [ ID { "," ID } ] ")" [ ":" | "{" ] <EOL> [ "{" <EOL> ] { statement [ ";" ] <EOL> } "return" expression [ ";" ] <EOL> [ "}" <EOL> ]
+    [ "function" | "def" | "double" ] ID "(" [ ID { [ "," ] ID } ] ")" [ ":" | "{" ] { statement [ ";" ] } "return" expression [ ";" ] [ "}" ]
     ;
 """
 def parse_function():
@@ -917,27 +913,21 @@ def parse_function():
   if not accepts(")"):
     parms.append(expect(T_ID))
     while not accepts(")"):
-      expect(",")
+      accepts(",")
       parms.append(expect(T_ID))
   debug_print("parms", parms)
 
   # verify that main has no parms
   if fn == "main" and len(parms) > 0:
-    error("Function `main' must not require arguments")
+    error("Function `main' must not take arguments")
 
   accepts(":") or accepts("{")
-  expect("<EOL>")
-  if accepts("{"):
-    expect("<EOL>")
   while not accepts("return"):
     parse_statement()
     accepts(";")
-    expect("<EOL>")
   expr = parse_expression()
   accepts(";")
-  expect("<EOL>")
-  if accepts("}"):
-    expect("<EOL>")
+  accepts("}")
   functions[fn] = (parms, expr)
   debug_out()
 
@@ -964,7 +954,7 @@ def main():
   parser = argparse.ArgumentParser(prog="cfs", description="Closed-Form Script Compiler.")
   parser.add_argument("-v", "--version", action="version", version="%(prog)s " + VERSION)
   parser.add_argument("-d", action="store_true", dest="debug", help="output verbose debugging information")
-  parser.add_argument("--allow-const", action="store_true", dest="allow_const", help="don't generate an error on missing const")
+  parser.add_argument("-c", "--allow-const", action="store_true", dest="allow_const", help="don't generate an error on missing consts")
   parser.add_argument("-o", dest="dest", metavar="DEST", help="write output into file DEST instead of stdout")
   parser.add_argument("src", metavar="SOURCE", help="file containing program to compile")
   cmdline = parser.parse_args()

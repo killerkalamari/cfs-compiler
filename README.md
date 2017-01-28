@@ -1,9 +1,9 @@
 # cfs-compiler
-Compiles Closed-Form Script (_cfs_) to a closed-form expression fully compatible with the Facer Android Wear watchface composer tool and app. The goals of the project are to work around bugs and omissions in the Facer implementation and to facilitate the creation of extraordinary watchface complications by presenting a more programmer-friendly language.
+Compiles Closed-Form Script (_cfs_) to a closed-form expression fully compatible with the Facer Android Wear watchface composer tool and app. My goals for _cfs_ are to facilitate the creation of watchface complications and secondarily to work around bugs and omissions in the Facer implementation. Using _cfs_, expressions can be generated that would be much too tedious to code by hand.
 
-The _cfs_ language provides additional functions for trigonometric and integer operations, const-style "variable" assignments, custom functions, and binary and ternary operators that are not based on the Facer ternary operator. Using _cfs_, expressions can be generated that would be much too tedious to code by hand. 
+The _cfs_ language provides additional functions for trigonometric and integer operations, const-style expression assignments, custom function declarations, and binary, ternary, and logical operators that are not based on the Facer equivalents. 
 
-The _cfs_ compiler is written in Python.
+The _cfs.py_ compiler is written in Python and is compatible with both Python 2 and 3.
 
 ### Table of Contents
 [Language Description](#language-description)
@@ -16,7 +16,7 @@ The _cfs_ compiler is written in Python.
 
 ## Language Description
 ### Overall Structure
-A _cfs_ program is comprised of one or more lines of comments, function declarations, const assignment statements, and return expressions. Only one function declaration, const assignment statement, or return expression may be present per line. No special statement terminator characters are necessary, although a semicolon may be used if desired. There must be at least one function declared, named `main`, that takes no arguments and returns an expression. The `main()` function is the starting point of the program.
+A _cfs_ program is comprised of one or more lines of comments, function declarations, const assignment statements, and return expressions. No special statement terminator characters are necessary, although a semicolon may be used if desired. There must be at least one function defined, named `main`, that takes no arguments and returns an expression. The `main()` function is the starting point for program execution.
 
 ### Comments
 Single line and multi-line comments are available, using the familiar C/C++ operators, `//` and `/* */`. Comments may start at the beginning or end of a line. Multi-line comments may span multiple lines and end in the middle of a line, if desired. 
@@ -36,16 +36,16 @@ function jupiter()
 ```
 
 ### Identifiers
-Identifiers in _cfs_ are used for function and const names, and are case sensitive. They are comprised of upper- and lowercase letters, numbers, and/or underscores, but cannot begin with a number.
+Identifiers in _cfs_ are used for function and const names, and are case sensitive. They are comprised of upper- and lowercase ASCII letters, numbers, and/or underscores, but cannot begin with a number.
 
 ### Facer Constants, Operators, Tags, and Functions
-Facer constants, operators, tags, and functions may be used, with their standard syntax, with the exception of the `$ $` ternary operator which has been replaced by the `if()` binary and ternary operators.
+Facer constants, operators, tags, and functions may be used, with their standard syntax. However, the Facer ternary and logical operators have been replaced.
 
 ### Literals
 Real numbers, `pi`, and `e` are supported as literals in _cfs_.
 
 ### Data Types
-Although all _cfs_ values are represented by floating-point numbers, some functions may only produce correct results if input values adhere to the expected restrictions of the following types:
+Although all _cfs_ values are represented by floating-point numbers, functions will only produce defined results when input values adhere to the following input type restrictions:
 
 | Type  | Description                               |
 | ----- | ----------------------------------------- |
@@ -58,9 +58,9 @@ The following operators are available in addition to the standard arithmetic ope
 
 | Operator | Syntax      | Input Types        | Output Type | Description                       |
 | -------- | ----------- | ------------------ | ----------- | --------------------------------- |
-| `!`      | `!x`        | bool               | bool        | Boolean not                       |
-| `not`    | `not x`     | bool               | bool        | Boolean not                       |
-| `^`      | `x^y`       | float, float       | float       | Exponentiation. May not be used sequentially. To square a number, use `x * x` instead. |
+| `!`      | `!x`        | bool               | bool        | Boolean not.                      |
+| `not`    | `not x`     | bool               | bool        | Boolean not.                      |
+| `^`      | `x^y`       | float, float       | float       | Exponentiation, left-associative. Tip: To square a number, use `x * x`. |
 | `%`      | `x%y`       | float, float       | float       | Modulo (remainder) function.      |
 | `<=`     | `x<=y`      | int, int           | bool        | Integer less than or equal to.    |
 | `>=`     | `x>=y`      | int, int           | bool        | Integer greater than or equal to. |
@@ -72,20 +72,29 @@ The following operators are available in addition to the standard arithmetic ope
 | `=`      | `x=y`       | int, int           | bool        | Integer equality.                 |
 | `!=`     | `x!=y`      | int, int           | bool        | Integer inequality.               |
 | `<>`     | `x<>y`      | int, int           | bool        | Integer inequality.               |
-| `&&`     | `x&&y`      | bool, bool         | bool        | Boolean and                       |
-| `and`    | `x and y`   | bool, bool         | bool        | Boolean and                       |
-| `||`     | `x||y`      | bool, bool         | bool        | Boolean or                        |
-| `or`     | `x or y`    | bool, bool         | bool        | Boolean or                        |
+| `&&`     | `x&&y`      | bool, bool         | bool        | Boolean and.                      |
+| `and`    | `x and y`   | bool, bool         | bool        | Boolean and.                      |
+| `||`     | `x||y`      | bool, bool         | bool        | Boolean or.                       |
+| `or`     | `x or y`    | bool, bool         | bool        | Boolean or.                       |
 | `if(,)`  | `if(b,t)`   | bool, float        | float       | Binary operator. Returns `t` on true, `0` on false. |
 | `if(,,)` | `if(b,t,f)` | bool, float, float | float       | Ternary operator. Returns `t` on true, `f` on false. |
 
-### Functions
+### Consts
+A const defines a name for an expression, with scope restricted to the function in which it is defined. Consts may not be redefined within a function, however the same const name may be defined in multiple functions.
 
+### Function Definitions
+Functions in _cfs_ may have zero or more required parameters, surrounded by required parentheses. Parameters may be optionally comma-separated. Functions may include zero or more statements, and must conclude with one `return` statement.
+
+### Statements
+#### Assignment Statement
+Assigns an expression to a const. The const name and expression must be separated by `=`.
+#### Return Statement
+Defines the return expression of a function.
 
 ## Operator Precedence
 | Precedence | Operators                        | Description                                           |
 | ---------- | -------------------------------- | ----------------------------------------------------- |
-| 1          | `()`, `f()`                      | parentheses, function calls                           |
+| 1          | `()`, _fn_`()`                   | parentheses, function calls                           |
 | 2          | `-`, `!`, `not`                  | unary minus, bool not                                 |
 | 3          | `^`                              | exponentiation                                        |
 | 4          | `*`, `/`, `%`                    | multiplication, truncating division, division, modulo |
@@ -134,9 +143,7 @@ program =
     ;
 
 function =
-    [ "function" | "def" | "double" ] ID "(" [ ID { "," ID } ] ")" [ ":" | "{" ] ␤
-        [ "{" ␤ ] { statement [ ";" ] ␤ } "return" expression [ ";" ] ␤ 
-        [ "}" ␤ ] 
+    [ "function" | "def" | "double" ] ID "(" [ ID { [ "," ] ID } ] ")" [ ":" | "{" ] { statement [ ";" ] } "return" expression [ ";" ] [ "}" ]
     ;
 
 statement =
@@ -173,7 +180,7 @@ mult_expression =
     ;
 
 exp_expression =
-    unary_expression [ "^" unary_expression ]
+    unary_expression { "^" unary_expression }
     ;
 
 unary_expression =
@@ -184,8 +191,9 @@ unary_expression =
 
 primary_expression =
     "(" expression ")"
-    | ID [ "(" [ expression { "," expression } ] ")" ]
+    | ID [ "(" [ expression { [ "," ] expression } ] ")" ]
     | NUM
     | TAG
     ;
 ```    
+
