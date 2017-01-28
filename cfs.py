@@ -21,7 +21,7 @@
 import sys, argparse, re, inspect, os, math
 from decimal import Decimal
 
-VERSION = "1.0-3"
+VERSION = "1.0-4"
 
 # token types
 T_NAMES = ("OPERATOR", "NUMBER", "IDENTIFIER", "TAG", "(end of line)", "FUNCTION", "CONST")
@@ -262,7 +262,7 @@ def consume():
   ti += 1
   return value
 
-def expect(expected):
+def expect_list(expected):
   global line_no, col_no
 
   if ti >= len(tokens):
@@ -275,13 +275,28 @@ def expect(expected):
       line_no = l
     if c is not None:
       col_no = c
-  istype = type(expected).__name__ == "int"
-  if istype:
-    if token_type != expected:
-      error("Expected {0}, saw {1}".format(T_NAMES[expected], T_NAMES[token_type]))
-  elif value != expected:
-    error("Expected `{0}', saw `{1}'".format(expected, value))
-  return consume()
+  expected_text = []
+  for expected_option in expected:
+    istype = type(expected_option).__name__ == "int"
+    if istype:
+      #if token_type != expected_option:
+      #  error("Expected {0}, saw {1}".format(T_NAMES[expected_option], T_NAMES[token_type]))
+      if token_type == expected_option:
+        return consume()
+      expected_text.append(T_NAMES[expected_option])
+    #elif value != expected_option:
+    #  error("Expected `{0}', saw `{1}'".format(expected_option, value))
+    elif value == expected_option:
+      return consume()
+    else:
+      expected_text.append("`{0}'".format(expected_option))
+  oneof = ""
+  if len(expected_text) > 1:
+    oneof = "one of "
+  error("Expected {0}{1}, saw `{2}' ({3})".format(oneof, ", ".join(expected_text), value, T_NAMES[token_type]))
+
+def expect(expected):
+  return expect_list([expected])
 
 def accepts(expected, discard=True):
   global line_no, col_no
@@ -845,7 +860,7 @@ def parse_or_expression():
 
 """
 expression =
-    "if" "(" expression "?" expression [ ":" expression ] ")"
+    "if" "(" expression ( "?" | "," ) expression [ ( ":" | "," ) expression ] ")"
     | or_expression
     ;
 """
@@ -858,9 +873,9 @@ def parse_expression():
   if accepts("if"):
     expect("(")
     bvalue = parse_expression()
-    expect("?")
+    expect_list(["?", ","])
     tvalue = parse_expression()
-    if accepts(":"):
+    if accepts(":") or accepts(","):
       fvalue = parse_expression()
       if is_num(bvalue, tvalue, fvalue):
         lvalue = lvalue[:-1] + calc_expression("?:", bvalue, tvalue, fvalue)

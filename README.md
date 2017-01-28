@@ -151,7 +151,7 @@ statement =
     ;
 
 expression =
-    "if" "(" expression "?" expression [ ":" expression ] ")"
+    "if" "(" expression ( "?" | "," ) expression [ ( ":" | "," ) expression ] ")"
     | or_expression
     ;
 
