@@ -29,12 +29,14 @@ T_OPER = 0
 T_NUM = 1
 T_ID = 2
 T_TAG = 3
-T_EOL = 4
-T_FUNC = 5
-T_CONST = 6
+T_FUNC = 4
+T_CONST = 5
 
 # external consts
-CONSTS = {"pi":math.pi, "e":math.e}
+CONSTS = {
+  "pi":math.pi,
+  "e":math.e
+}
 
 # external function definitions
 EXTERNS = [
@@ -279,13 +281,9 @@ def expect_list(expected):
   for expected_option in expected:
     istype = type(expected_option).__name__ == "int"
     if istype:
-      #if token_type != expected_option:
-      #  error("Expected {0}, saw {1}".format(T_NAMES[expected_option], T_NAMES[token_type]))
       if token_type == expected_option:
         return consume()
       expected_text.append(T_NAMES[expected_option])
-    #elif value != expected_option:
-    #  error("Expected `{0}', saw `{1}'".format(expected_option, value))
     elif value == expected_option:
       return consume()
     else:
