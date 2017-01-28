@@ -144,9 +144,9 @@ program =
 
 function =
     [ "function" | "def" | "double" ] ID "(" [ ID { [ "," ] ID } ] ")" [ ":" | "{" ]
-    { statement [ ";" ] }
-    "return" expression [ ";" ]
-    [ "}" ]
+        { statement [ ";" ] }
+        "return" expression [ ";" ]
+        [ "}" ]
     ;
 
 statement =
