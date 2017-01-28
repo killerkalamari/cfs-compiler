@@ -143,7 +143,10 @@ program =
     ;
 
 function =
-    [ "function" | "def" | "double" ] ID "(" [ ID { [ "," ] ID } ] ")" [ ":" | "{" ] { statement [ ";" ] } "return" expression [ ";" ] [ "}" ]
+    [ "function" | "def" | "double" ] ID "(" [ ID { [ "," ] ID } ] ")" [ ":" | "{" ]
+    { statement [ ";" ] }
+    "return" expression [ ";" ]
+    [ "}" ]
     ;
 
 statement =
