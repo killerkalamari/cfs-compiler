@@ -422,50 +422,53 @@ def calc_function(expr):
     return expr
   arg1 = args[0][1]
   function_name = expr[0][1]
-  if function_name == "abs":
-    token = [[T_NUM, abs(arg1)]]
-  elif function_name == "sin":
-    token = [[T_NUM, math.sin(arg1)]]
-  elif function_name == "cos":
-    token = [[T_NUM, math.cos(arg1)]]
-  elif function_name == "tan":
-    token = [[T_NUM, math.tan(arg1)]]
-  elif function_name == "asin":
-    token = [[T_NUM, math.asin(arg1)]]
-  elif function_name == "acos":
-    token = [[T_NUM, math.acos(arg1)]]
-  elif function_name == "atan":
-    token = [[T_NUM, math.atan(arg1)]]
-  elif function_name == "sinh":
-    token = [[T_NUM, math.sinh(arg1)]]
-  elif function_name == "cosh":
-    token = [[T_NUM, math.cosh(arg1)]]
-  elif function_name == "tanh":
-    token = [[T_NUM, math.tanh(arg1)]]
-  elif function_name == "round":
-    token = [[T_NUM, round(arg1)]]
-  elif function_name == "ceil":
-    token = [[T_NUM, math.ceil(arg1)]]
-  elif function_name == "floor":
-    token = [[T_NUM, math.floor(arg1)]]
-  elif function_name == "log":
-    token = [[T_NUM, math.log(arg1)]]
-  elif function_name == "log2":
-    token = [[T_NUM, math.log(arg1) / math.log(2)]]
-  elif function_name == "log10":
-    token = [[T_NUM, math.log10(arg1)]]
-  elif function_name == "sqrt":
-    token = [[T_NUM, math.sqrt(arg1)]]
-  elif function_name == "cbrt":
-    token = [[T_NUM, arg1**(1.0/3)]]
-  elif function_name == "exp":
-    token = [[T_NUM, math.exp(arg1)]]
-  elif function_name == "expm1":
-    token = [[T_NUM, math.exp(arg1) - 1]]
-  elif function_name == "deg":
-    token = [[T_NUM, arg1 * 180 / math.pi]]
-  elif function_name == "rad":
-    token = [[T_NUM, arg1 * math.pi / 180]]
+  try:
+    if function_name == "abs":
+      token = [[T_NUM, abs(arg1)]]
+    elif function_name == "sin":
+      token = [[T_NUM, math.sin(arg1)]]
+    elif function_name == "cos":
+      token = [[T_NUM, math.cos(arg1)]]
+    elif function_name == "tan":
+      token = [[T_NUM, math.tan(arg1)]]
+    elif function_name == "asin":
+      token = [[T_NUM, math.asin(arg1)]]
+    elif function_name == "acos":
+      token = [[T_NUM, math.acos(arg1)]]
+    elif function_name == "atan":
+      token = [[T_NUM, math.atan(arg1)]]
+    elif function_name == "sinh":
+      token = [[T_NUM, math.sinh(arg1)]]
+    elif function_name == "cosh":
+      token = [[T_NUM, math.cosh(arg1)]]
+    elif function_name == "tanh":
+      token = [[T_NUM, math.tanh(arg1)]]
+    elif function_name == "round":
+      token = [[T_NUM, round(arg1)]]
+    elif function_name == "ceil":
+      token = [[T_NUM, math.ceil(arg1)]]
+    elif function_name == "floor":
+      token = [[T_NUM, math.floor(arg1)]]
+    elif function_name == "log":
+      token = [[T_NUM, math.log(arg1)]]
+    elif function_name == "log2":
+      token = [[T_NUM, math.log(arg1) / math.log(2)]]
+    elif function_name == "log10":
+      token = [[T_NUM, math.log10(arg1)]]
+    elif function_name == "sqrt":
+      token = [[T_NUM, math.sqrt(arg1)]]
+    elif function_name == "cbrt":
+      token = [[T_NUM, arg1 ** (1.0 / 3)]]
+    elif function_name == "exp":
+      token = [[T_NUM, math.exp(arg1)]]
+    elif function_name == "expm1":
+      token = [[T_NUM, math.exp(arg1) - 1]]
+    elif function_name == "deg":
+      token = [[T_NUM, arg1 * 180 / math.pi]]
+    elif function_name == "rad":
+      token = [[T_NUM, arg1 * math.pi / 180]]
+  except ValueError as e:
+    error("Error calculating `{0}'".format(serialize_expression(expr)))
   return token
 
 def deref_tag(token):
