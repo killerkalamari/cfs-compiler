@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-#
+#=========================================================================
 # Closed-Form Script Compiler
 # Compiles Closed-Form Script to a Facer compatible closed-form expression
 #
-# Copyright (C) 2017 Jeffry Johnston
+# Copyright (C) 2017 Jeffry Johnston <cfs@kidsquid.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,14 +17,15 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
+#=========================================================================
 
 import sys, argparse, re, inspect, os, math
 from decimal import Decimal
 
-VERSION = "1.0-4"
+VERSION = "1.0-5"
 
 # token types
-T_NAMES = ("OPERATOR", "NUMBER", "IDENTIFIER", "TAG", "(end of line)", "FUNCTION", "CONST")
+T_NAMES = ("OPERATOR", "NUMBER", "IDENTIFIER", "TAG", "FUNCTION", "CONST")
 T_OPER = 0
 T_NUM = 1
 T_ID = 2
@@ -934,8 +935,8 @@ def parse_function():
   debug_print("parms", parms)
 
   # verify that main has no parms
-  if fn == "main" and len(parms) > 0:
-    error("Function `main' must not take arguments")
+  if fn == cmdline.main and len(parms) > 0:
+    error("Function `{0}' must not take arguments".format(cmdline.main))
 
   accepts(":") or accepts("{")
   while not accepts("return"):
@@ -971,6 +972,7 @@ def main():
   parser.add_argument("-v", "--version", action="version", version="%(prog)s " + VERSION)
   parser.add_argument("-d", action="store_true", dest="debug", help="output verbose debugging information")
   parser.add_argument("-c", "--allow-const", action="store_true", dest="allow_const", help="don't generate an error on missing consts")
+  parser.add_argument("-m", "--main", dest="main", default="main", metavar="FUNC", help="invoke function FUNC instead of main()")
   parser.add_argument("-o", dest="dest", metavar="DEST", help="write output into file DEST instead of stdout")
   parser.add_argument("src", metavar="SOURCE", help="file containing program to compile")
   cmdline = parser.parse_args()
@@ -1003,11 +1005,11 @@ def main():
   debug_print("consts", consts)
 
   # verify main function exists
-  if not functions.has_key("main"):
-    error("Missing required function declaration: `main'")
+  if not functions.has_key(cmdline.main):
+    error("Missing required function declaration: `{0}'".format(cmdline.main))
 
   # serialize expression
-  expr = functions["main"][1]
+  expr = functions[cmdline.main][1]
   debug_print("expr", expr)
   expr_s = "(" + serialize_expression(expr, cmdline.allow_const) + ")"
 
