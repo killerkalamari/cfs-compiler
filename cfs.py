@@ -22,7 +22,7 @@
 import sys, argparse, re, inspect, os, math
 from decimal import Decimal
 
-VERSION = "1.0-5"
+VERSION = "1.0-6"
 
 # token types
 T_NAMES = ("OPERATOR", "NUMBER", "IDENTIFIER", "TAG", "FUNCTION", "CONST")
@@ -34,7 +34,7 @@ T_FUNC = 4
 T_CONST = 5
 
 # external consts
-CONSTS = {
+CONSTANTS = {
   "pi":math.pi,
   "e":math.e
 }
@@ -82,12 +82,6 @@ EXTERNS = [
 ]
 
 LIBRARY = [
-  ("asind", ("x",), [(T_ID, "deg"), (T_OPER, "("), (T_ID, "asin"), (T_OPER, "("), (T_ID, "x"), (T_OPER, ")"), (T_OPER, ")")]),
-  ("acosd", ("x",), [(T_ID, "deg"), (T_OPER, "("), (T_ID, "acos"), (T_OPER, "("), (T_ID, "x"), (T_OPER, ")"), (T_OPER, ")")]),
-  ("atand", ("x",), [(T_ID, "deg"), (T_OPER, "("), (T_ID, "atan"), (T_OPER, "("), (T_ID, "x"), (T_OPER, ")"), (T_OPER, ")")]),
-  ("sind", ("angle",), [(T_ID, "sin"), (T_OPER, "("), (T_ID, "rad"), (T_OPER, "("), (T_ID, "angle"), (T_OPER, ")"), (T_OPER, ")")]),
-  ("cosd", ("angle",), [(T_ID, "cos"), (T_OPER, "("), (T_ID, "rad"), (T_OPER, "("), (T_ID, "angle"), (T_OPER, ")"), (T_OPER, ")")]),
-  ("tand", ("angle",), [(T_ID, "tan"), (T_OPER, "("), (T_ID, "rad"), (T_OPER, "("), (T_ID, "angle"), (T_OPER, ")"), (T_OPER, ")")]),
   ("signf", ("x",), [(T_ID, "abs"), (T_OPER, "("), (T_ID, "x"), (T_OPER, ")"), (T_OPER, "/"), (T_OPER, "("), (T_ID, "x"), (T_OPER, ")")]),
   ("sign", ("i",), [(T_ID, "signf"), (T_OPER, "("), (T_ID, "i"), (T_OPER, "+"), (T_NUM, 0.5), (T_OPER, ")")]),
   ("signn", ("i",), [(T_ID, "signf"), (T_OPER, "("), (T_ID, "i"), (T_OPER, "-"), (T_NUM, 0.5), (T_OPER, ")")]),
@@ -99,38 +93,32 @@ LIBRARY = [
   ("__<", ("l", "r"), [(T_OPER, "("), (T_NUM, 1), (T_OPER, "-"), (T_ID, "sign"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, 2)]),
   ("__>", ("l", "r"), [(T_OPER, "("), (T_NUM, 1), (T_OPER, "+"), (T_ID, "signn"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, 2)]),
   ("__==", ("l", "r"), [(T_OPER, "("), (T_ID, "l"), (T_OPER, ">="), (T_ID, "r"), (T_OPER, ")"), (T_OPER, "*"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "<="), (T_ID, "r"), (T_OPER, ")")]),
-  ("__!=", ("l", "r"), [(T_OPER, "("), (T_NUM, 4), (T_OPER, "-"), (T_OPER, "("), (T_NUM, 1), (T_OPER, "+"), (T_ID, "sign"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "*"), (T_OPER, "("), (T_NUM, 1), (T_OPER, "-"), (T_ID, "signn"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, 4)]),
-  ("atan2", ("y", "x"), [(T_ID, "atan"), (T_OPER, "("), (T_ID, "y"), (T_OPER, "/"), (T_ID, "x"), (T_OPER, ")"), (T_OPER, "+"), (T_ID, "__<:"), (T_OPER, "("), (T_ID, "x"), (T_OPER, ","), (T_NUM, 0), (T_OPER, ")"), (T_OPER, "*"), (T_ID, "signf"), (T_OPER, "("), (T_ID, "y"), (T_OPER, ")"), (T_OPER, "*"), (T_NUM, "pi")]),
-  ("atan2d", ("y", "x"), [(T_ID, "deg"), (T_OPER, "("), (T_ID, "atan2"), (T_OPER, "("), (T_ID, "y"), (T_OPER, ","), (T_ID, "x"), (T_OPER, ")"), (T_OPER, ")")])
+  ("__!=", ("l", "r"), [(T_OPER, "("), (T_NUM, 4), (T_OPER, "-"), (T_OPER, "("), (T_NUM, 1), (T_OPER, "+"), (T_ID, "sign"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "*"), (T_OPER, "("), (T_NUM, 1), (T_OPER, "-"), (T_ID, "signn"), (T_OPER, "("), (T_ID, "l"), (T_OPER, "-"), (T_ID, "r"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, ")"), (T_OPER, "/"), (T_NUM, 4)])
 ]
 
 # globals
 cmdline = None
-src = None
+src = {}
 tokens = []
 functions = {}
 consts = {}
 ti = 0
 fn = "lexer"
-line_no = None
-col_no = None
 
-def error(message):
-  global line_no, col_no
-
+def error(message, line_no=None, col_no=None, filename=None, ti_offset=0):
+  global ti
+  ti += ti_offset
+  if ti == len(tokens) and len(tokens) > 0:
+    ti = len(tokens) - 1
   if line_no is None and ti < len(tokens):
     if len(tokens[ti]) == 2:
       token_type, value = tokens[ti]
       line_no = None
     else:
-      token_type, value, l, c = tokens[ti]
-      if l is not None:
-        line_no = l
-      if c is not None:
-        col_no = c
+      token_type, value, line_no, col_no, filename = tokens[ti]
   if line_no is not None:
-    line = src[line_no - 1].rstrip("\r\n")
-    posinfo = "Line {0}, Col {1}, `{2}':\n".format(line_no, col_no, line)
+    line = src[filename][line_no - 1].rstrip("\r\n")
+    posinfo = "In file `{0}': Line {1}, Col {2}, `{3}':\n".format(filename, line_no, col_no, line)
   else:
     posinfo = ""
   sys.exit("{0}{1}.".format(posinfo, message))
@@ -156,8 +144,8 @@ def debug_parse(d):
       col_no = None
       line = ""
     else:
-      token_type, value, line_no, col_no = tokens[ti]
-      line = src[line_no - 1]
+      token_type, value, line_no, col_no, filename = tokens[ti]
+      line = src[filename][line_no - 1]
       line = (line[:col_no - 1].strip() + " ===> " + line[col_no - 1:]).strip()
   else:
     token = None
@@ -170,17 +158,39 @@ def debug_in():
 def debug_out():
   debug_parse("out")
 
-def lexer():
-  global line_no, col_no
+WHITESPACE = " \t\r\n\f\v"
+OPERATORS = ("(", ")", "!=", "!", "^", "*", "/", "%", "+", "-", "<=", "<:", "<>", "<", ">=", ">:", ">", "&&", "||", "==", "=", "?", ":", ",", ";", "{", "}")
+RE_NUM = re.compile(r"\d*\.?\d+")
+RE_ID = re.compile("[A-Za-z_][0-9A-Za-z_]*")
+RE_TAG = re.compile(r"#[0-9A-Za-z_]*#")
+INCLUDE_KEYWORDS = ("include", "#include", "import")
 
-  WHITESPACE = " \t\r\n\f\v"
-  OPERATORS = ("(", ")", "!=", "!", "^", "*", "/", "%", "+", "-", "<=", "<:", "<>", "<", ">=", ">:", ">", "&&", "||", "==", "=", "?", ":", ",", ";", "{", "}")
-  RE_NUM = re.compile(r"\d*\.?\d+")
-  RE_ID = re.compile("[A-Za-z_][0-9A-Za-z_]*")
-  RE_TAG = re.compile(r"#[0-9A-Za-z_]*#")
+def lexer(filename, include_paths):
+  # find source file
+  for include_path in include_paths:
+    path = os.path.join(include_path, filename)
+    if os.path.exists(path):
+      break
+    path = os.path.join(include_path, filename + ".cfs")
+    if os.path.exists(path):
+      filename += ".cfs"
+      break
+  else:
+    error("Could not find source file `{0}'".format(filename))
 
-  mlc = False
-  for line_no, line in enumerate(src):
+  # read source file
+  if src.has_key(filename):
+    return
+  try:
+    f = open(path, "r")
+    src[filename] = f.readlines()
+    f.close()
+  except IOError as e:
+    sys.exit("Error reading source file `{0}': {1}".format(filename, e))
+
+  mode_mlc = False
+  mode_include = False
+  for line_no, line in enumerate(src[filename]):
     line_no += 1
     line = line.rstrip("\r\n")
     i = 0
@@ -189,11 +199,11 @@ def lexer():
       col_no = i + 1
 
       # multi-line comment (end)
-      if mlc:
+      if mode_mlc:
         i = line.find("*/", i)
         if i < 0:
           break
-        mlc = False
+        mode_mlc = False
         i += 2
         continue
 
@@ -202,14 +212,42 @@ def lexer():
         i += 1
         continue
 
+      # include (end)
+      if mode_include:
+        if sub[0] in "<\"":
+          i += 1
+        j = -1
+        for k in ">\"," + WHITESPACE:
+          j = line.find(k, i)
+          if j != -1:
+            break
+        else:
+          j = len(line)
+        include_filename = line[i:j]
+        debug_print("include_filename", include_filename)
+        lexer(include_filename, include_paths)
+        i = j + 1
+        if k != ",":
+          mode_include = False
+        continue
+
       # line comment
       if sub.startswith("//"):
         break
 
       # multi-line comment (start)
-      elif sub.startswith("/*"):
-        mlc = True
+      if sub.startswith("/*"):
+        mode_mlc = True
         i += 2
+        continue
+
+      # include (start)
+      for include_keyword in INCLUDE_KEYWORDS:
+        if sub.startswith(include_keyword):
+          mode_include = True
+          i += len(include_keyword)
+          break
+      if mode_include:
         continue
 
       # number
@@ -222,7 +260,7 @@ def lexer():
           s = "0" + s
 
         num = float(s) if "." in s else int(s)
-        tokens.append((T_NUM, num, line_no, col_no))
+        tokens.append((T_NUM, num, line_no, col_no, filename))
         i += len(s)
         continue
 
@@ -230,7 +268,7 @@ def lexer():
       found_op = False
       for op in OPERATORS:
         if sub.startswith(op):
-          tokens.append((T_OPER, op, line_no, col_no))
+          tokens.append((T_OPER, op, line_no, col_no, filename))
           i += len(op)
           found_op = True
           break
@@ -241,10 +279,10 @@ def lexer():
       match = RE_ID.match(sub)
       if match:
         s = match.group()
-        if s in CONSTS:
-          tokens.append((T_NUM, s, line_no, col_no))
+        if s in CONSTANTS:
+          tokens.append((T_NUM, s, line_no, col_no, filename))
         else:
-          tokens.append((T_ID, s, line_no, col_no))
+          tokens.append((T_ID, s, line_no, col_no, filename))
         i += len(s)
         continue
 
@@ -252,11 +290,11 @@ def lexer():
       match = RE_TAG.match(sub)
       if match:
         s = match.group()
-        tokens.append((T_TAG, s, line_no, col_no))
+        tokens.append((T_TAG, s, line_no, col_no, filename))
         i += len(s)
         continue
 
-      error("Unrecognized input: `{0}'".format(sub))
+      error("Unrecognized input: `{0}'".format(sub), line_no, col_no, filename)
 
 def consume():
   global ti
@@ -266,18 +304,9 @@ def consume():
   return value
 
 def expect_list(expected):
-  global line_no, col_no
-
   if ti >= len(tokens):
     error("Unexpected end of input")
-  if len(tokens[ti]) == 2:
-    token_type, value = tokens[ti]
-  else:
-    token_type, value, l, c = tokens[ti]
-    if l is not None:
-      line_no = l
-    if c is not None:
-      col_no = c
+  token_type, value = tokens[ti][:2]
   expected_text = []
   for expected_option in expected:
     istype = type(expected_option).__name__ == "int"
@@ -298,18 +327,9 @@ def expect(expected):
   return expect_list([expected])
 
 def accepts(expected, discard=True):
-  global line_no, col_no
-
   if ti >= len(tokens):
     return False
-  if len(tokens[ti]) == 2:
-    token_type, value = tokens[ti]
-  else:
-    token_type, value, l, c = tokens[ti]
-    if l is not None:
-      line_no = l
-    if c is not None:
-      col_no = c
+  token_type, value = tokens[ti][:2]
   istype = type(expected).__name__ == "int"
   accepted = (istype and token_type == expected) or (not istype and value == expected)
   if accepted and discard:
@@ -350,7 +370,7 @@ def deref_function(function_name, args):
         if cmdline.allow_const:
           fvalue = [fvalue]
         else:
-          error("Missing definition for const `{0}' in function `{1}'".format(const_name, function_name))
+          error("Missing definition for const `{0}' in function `{1}'".format(const_name, function_name), ti_offset = -1)
     else:
       fvalue = [fvalue]
     value += fvalue
@@ -475,7 +495,7 @@ def calc_function(expr):
 def deref_tag(token):
   value = token[1]
   try:
-    return CONSTS[value]
+    return CONSTANTS[value]
   except:
     return value
 
@@ -965,14 +985,15 @@ def parse():
   parse_program()
 
 def main():
-  global src, cmdline, fn, tokens, ti
+  global cmdline, tokens
 
   # parse command line arguments
   parser = argparse.ArgumentParser(prog="cfs", description="Closed-Form Script Compiler.")
   parser.add_argument("-v", "--version", action="version", version="%(prog)s " + VERSION)
-  parser.add_argument("-d", action="store_true", dest="debug", help="output verbose debugging information")
+  parser.add_argument("-d", "--debug", action="store_true", dest="debug", help="output verbose debugging information")
   parser.add_argument("-c", "--allow-const", action="store_true", dest="allow_const", help="don't generate an error on missing consts")
   parser.add_argument("-m", "--main", dest="main", default="main", metavar="FUNC", help="invoke function FUNC instead of main()")
+  parser.add_argument("-i", "--include", dest="include", default="/usr/local/share/cfs", metavar="PATH", help="standard include file PATH")
   parser.add_argument("-o", dest="dest", metavar="DEST", help="write output into file DEST instead of stdout")
   parser.add_argument("src", metavar="SOURCE", help="file containing program to compile")
   cmdline = parser.parse_args()
@@ -987,16 +1008,12 @@ def main():
     functions[name] = (parms, expr)
   cmdline.debug = debug_orig
 
-  # read source code
-  try:
-    f = open(cmdline.src, "r")
-    src = f.readlines()
-    f.close()
-  except IOError as e:
-    sys.exit("Error reading source file: {0}".format(e))
-
   # parse into tokens
-  lexer()
+  include_paths = [os.path.dirname(cmdline.src), cmdline.include]
+  debug_print("include_paths", include_paths)
+  filename = os.path.basename(cmdline.src)
+  debug_print("filename", filename)
+  lexer(filename, include_paths)
   debug_print("tokens", tokens)
 
   # parse grammar

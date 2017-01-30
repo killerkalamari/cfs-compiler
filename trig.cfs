@@ -1,0 +1,92 @@
+/*
+ * Additional trigonometric functions
+ *
+ * Copyright (C) 2017 Jeffry Johnston <cfs@kidsquid.com>
+ *
+ * This file is part of cfs.
+ *
+ * cfs is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * cfs is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with cfs. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/*
+| Function          | Input Types        | Output Type | Domain             |
+| ----------------- | ------------------ | ----------- | ------------------ |
+| acosd(x)          | float              | float       | −1 <= x <= 1       |
+| asind(x)          | float              | float       | −1 <= x <= 1       |
+| atan2(y, x)       | float, float       | float       | x != 0, y != 0     |
+| atan2d(y, x)      | float, float       | float       | x != 0, y != 0     |
+| atand(x)          | float              | float       | R                  |
+| cosd(angle)       | float              | float       | R                  |
+| sind(angle)       | float              | float       | R                  |
+| tand(angle)       | float              | float       | x != pi/2 + k*pi   |
+| _atan(x)          | float              | float       | x != 0             |
+| _atan2(y, x)      | float, float       | float       | x != 0, y != 0     |
+| _asin(x)          | float              | float       | −1 < x < 1, x != 0 |
+| _acos(x)          | float              | float       | −1 < x < 1, x != 0 |
+| _asind(x)         | float              | float       | −1 < x < 1, x != 0 |
+| _acosd(x)         | float              | float       | −1 < x < 1, x != 0 |
+| _atand(x)         | float              | float       | x != 0             |
+| _atan2d(y, x)     | float, float       | float       | x != 0, y != 0     |
+*/
+
+asind(x)
+	return deg(asin(x))
+
+acosd(x)
+	return deg(asin(x))
+
+atand(x)
+	return deg(atan(x))
+
+sind(angle)
+	return sin(rad(angle))
+
+cosd(angle)
+	return cos(rad(angle))
+
+tand(angle)
+	return tan(rad(angle))
+
+atan2(y, x)
+	return atan(y / x) + (x <: 0) * signf(y) * pi
+
+atan2d(y, x)
+	return deg(atan2(y, x))
+
+_atan(x)
+	return if(x >: 0 ? pi * x * (x + 0.596227) / (2 * x * (x + 1.192454) + 2) : pi * x * (0.596227 - x) / (2 * x * (x - 1.192454) + 2))
+
+_atan2(y, x)
+	return _atan(y / x) + (x <: 0) * signf(y) * pi
+
+_asin(x)
+	return _atan2(x, sqrt(1 - x * x))
+
+_acos(x)
+	return _atan2(sqrt(1 - x * x), x)
+
+_asind(x)
+	return deg(_asin(x))
+
+_acosd(x)
+	return deg(_acos(x))
+
+_atand(x)
+	return deg(_atan(x))
+
+_atan2d(y, x)
+	return deg(_atan2(y, x))
+test__atan2d()
+	return _atan2d(0.559666, -0.762512) // expected result: 143.5989680330325484, atan2d: 143.7222005609916664
+
